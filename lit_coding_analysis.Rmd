@@ -1,0 +1,251 @@
+---
+title: "Literature Coding Analysis for 'Characterising the use of internal meta-analyses and assessing their impact'"
+author: "Mandy Norrbo & Lisa DeBruine"
+date: "27/02/2020"
+output:
+  pdf_document:
+    fig_caption: no
+    number_sections: no
+    toc: yes
+    toc_depth: 3
+    fig_width: 9
+    fig_height: 7
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 3
+    fig_width: 9
+    fig_height: 7
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\pagebreak
+
+# Dependencies
+```{r, message = F, warning = F}
+library(tidyverse)
+```
+
+# Session info
+```{r}
+sessionInfo()
+```
+
+# Import data
+```{r, message = FALSE}
+dat <- read_csv("quantdata.csv")
+```
+
+# Analysis
+
+## Data wrangling
+Creating a dataframe that contains only data for comparing internal meta-analysis articles and matched control articles.
+```{r}
+
+tidydat <- dat %>%
+  #selecting columns of interest in analysis
+  select(-c("TITLE", "DOI", "EMPIRICAL", "SIGTEST", "COMMENT")) %>% 
+  #selecting the studies that should be included in the control vs minimeta analysis
+  filter(INCLUDE == "yes") %>% 
+  #filtering out empty columns
+  select(-"PVAL8", -"PVAL9", -"PVAL10", -"PVAL11", 
+         -"PVAL12", -"N8", -"N9", -"N10", -"N11", -"N12") %>%  
+  gather(key = "PVALNO", value = "PVALUES", 
+         PVAL1,PVAL2,PVAL3,PVAL4,PVAL5,PVAL6, PVAL7)
+
+```
+
+## Descriptives
+
+### Prevalence
+Calculating how many articles used internal meta-analysis out of all coded empirical articles
+```{r}
+
+nmini <- dat %>% 
+  filter(EMPIRICAL == "yes") %>% 
+  count(USES_MINIMETA == "yes") %>%
+  arrange(n)
+  
+```
+
+`r nmini$n[1]` out of `r nmini$n[2]+nmini$n[1]` empirical research articles published between May and September 2019 in the Journal of Experimental Social Psychology used an internal meta-analysis — that is `r round(nmini$n[1]/(nmini$n[2]+nmini$n[1])*100)`%.
+
+### Multi-study papers
+Calculating how many articles included more than one study
+```{r}
+#no of articles with more than 1 study
+multidat <- dat %>% 
+  select(STUDY_NO) %>% 
+  filter(STUDY_NO > 1) %>% 
+  nrow()
+
+#no of articles with just 1 study
+singledat <- dat %>% 
+  select(STUDY_NO) %>% 
+  filter(STUDY_NO == 1) %>% 
+  nrow()
+```
+
+`r multidat` out of `r singledat+multidat` empirical articles reported the findings of more than one study, only `r singledat` reported the findings from a single study.
+
+### Aggregated studies
+Calculating how many studies were combined in internal meta-analysis articles
+```{r}
+
+#selecting articles that used minimeta
+minidat <- tidydat %>%  
+  filter(USES_MINIMETA == "yes")
+
+#number of individual studies that were aggregated
+nstudymini <- minidat  %>%
+  summarise(mean = mean(META_STUDY_NO),
+            median = median(META_STUDY_NO),
+            sd = sd(META_STUDY_NO))
+
+```
+
+The number of studies combined in the mini meta-analyses coded in this overview range from `r min(minidat$META_STUDY_NO)` to `r max(minidat$META_STUDY_NO)`, with a mean of `r nstudymini$mean`, median of `r nstudymini$median`, and with a standard deviation of `r round(nstudymini$sd, 2)`.
+
+### Sample sizes
+
+```{r}
+
+#sample size dataframe for plotting & descriptives
+ndat <- dat %>% 
+  filter(INCLUDE == "yes", USES_MINIMETA == "yes") %>% 
+  select(c("N1", "N2", "N3", "N4", "N5", "N6", "N7", "USES_MINIMETA", "STUDY_ID")) %>% 
+  gather(key = "NSTUDY", value = "NVALUES", 
+         N1, N2, N3, N4, N5, N6, N7)
+
+```
+
+Sample sizes within single studies ranged from `r min(ndat$NVALUES, na.rm = TRUE)` to `r max(ndat$NVALUES, na.rm = TRUE)`, with a mean size of `r round(mean(ndat$NVALUES, na.rm = TRUE))` and median size of `r median(ndat$NVALUES, na.rm = TRUE)`.
+
+### How many p > 0.05?
+
+```{r}
+
+#how many p-values > 0.05 grouped by minimeta use (yes/no)
+nullp <- tidydat %>%
+  filter(PVALUES > 0.05) %>% 
+  group_by(USES_MINIMETA) %>% 
+  summarise(n = n())
+
+#how many individual studies in total in 20 articles
+studytot <- tidydat %>% 
+  filter(PVALUES != "") %>% 
+  nrow()
+
+
+```
+
+Out of the 20 articles and `r studytot` individual studies, `r nullp$n[1]+nullp$n[2]` p-values were nonsignificant. Out of these, `r nullp$n[2]` were in the articles that used internal meta-analyses, while `r nullp$n[1]` were in the matched control articles that did not end up using an internal meta-analysis.
+
+
+### Pre-registrations
+
+```{r}
+
+#dataframe with prereg information
+prereg <- dat %>% 
+  filter(INCLUDE == "yes", USES_MINIMETA == "yes") %>% 
+  select(STUDY_ID, STUDY_NO,PRE_REG) 
+
+#percentage pre-registered
+percreg <- round(sum(prereg$PRE_REG)/sum(prereg$STUDY_NO),2)*100
+#total no. pre-registered
+totalreg <- sum(prereg$PRE_REG)
+#out of how many studies
+outof <- sum(prereg$STUDY_NO)
+
+```
+
+
+Within the internal meta-analysis articles, `r totalreg` out of `r outof`, , that is `r percreg`%, were reported to have been pre-registered. Only 1 article (82_2) seemed to have pre-registered all studies within the internal meta-analysis. However, the internal meta-analysis itself did not seem to be pre-registered and thus, when to run it and which studies to include was still flexible. 
+
+### How many do not report p-values?
+
+```{r}
+
+#articles without p-values were coded as "not sure" in "IS_MINI_SIG" variable
+nopval <- dat %>% 
+  filter(IS_MINI_SIG == "not sure") %>% 
+  nrow()
+
+```
+
+
+Out of the `r nmini$n[1]` coded articles using an internal meta-analysis, `r nopval` did not report an overall significance level (i.e. p-value) for the meta-analysis, instead reporting only effect sizes and confidence intervals.
+
+## Visualisation 
+### sample sizes
+
+```{r, warning = FALSE}
+
+g2 <- ggplot(ndat, aes(x=NSTUDY, y=NVALUES)) +
+  geom_point(aes(colour = STUDY_ID), size = 2) +
+  geom_line(aes(group = STUDY_ID, colour = STUDY_ID), size = 1) + 
+  theme(axis.text.x  = element_text(size = 5)) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels=c("N1" = "1", "N2" = "2", 
+                            "N3" = "3", "N4" = "4", 
+                            "N5"= "5", "N6" = "6", "N7" = "7"), name = "Study") +
+  scale_y_continuous(name = "Total sample size (N)") +
+  labs(title = "Sample size distribution across studies using internal meta-analysis") +
+  theme(axis.title = element_text(size = 15), 
+        title = element_text(size = 15), 
+        axis.text = element_text(size = 10), 
+        axis.ticks.x = element_line(size = 1), 
+        axis.text.x =element_text(size=12), 
+        axis.text.y = element_text(size=12), 
+        legend.text = element_text(size = 12))
+g2
+
+#ggsave("minimeta_n_plot.png", width = 10, height = 6)
+```
+
+
+
+### p-values
+A figure comparing internal meta-analyses to their matched controls regarding the distribution of p-values.
+```{r, warning = FALSE}
+
+#labels for plot
+supp.labs <- c('no' = "Used internal meta-analysis", 
+               'yes' = "Did not use internal meta-analysis")
+
+g1 <- ggplot(tidydat, aes(x=PVALNO, y=PVALUES)) +
+  geom_point(aes(colour = STUDY_ID), size = 2) +
+  geom_line(aes(group = STUDY_ID, colour = STUDY_ID), size = 1) + 
+  geom_segment(aes(x = 0, xend = 7, y =.05, yend = 0.05), 
+               colour = "red", size = 0.5, linetype = "longdash")  +
+  theme(axis.text.x  = element_text(size = 5)) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels=c("PVAL1" = "1", "PVAL2" = "2", 
+                            "PVAL3" = "3", "PVAL4" = "4", 
+                            "PVAL5"= "5", "PVAL6" = "6", 
+                            "PVAL7" = "7"), 
+                   name = "Study") +
+  scale_y_continuous(name = "p-value") +
+  labs(title = "p-value distribution across studies by article type") +
+  theme(axis.title = element_text(size = 15), 
+        title = element_text(size = 15), 
+        axis.text = element_text(size = 10), 
+        axis.ticks.x = element_line(size = 1), 
+        axis.text.x =element_text(size=12), 
+        axis.text.y = element_text(size=12), 
+        legend.text = element_text(size = 12),
+        strip.text.x = element_text(size = 17)) +
+  facet_wrap(~CONTROL, labeller = as_labeller(supp.labs))
+
+g1
+
+#ggsave("p_dist_plot.png", width = 10, height = 7)
+
+```
+
