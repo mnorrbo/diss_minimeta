@@ -6,4 +6,4 @@ If you don't even have the time to run some functions and plots, `minimeta_simul
 
 `bibliography.bib` contains the references used in the script, whereas `apa.csl` contains the APA citation style from https://github.com/citation-style-language.
 
-The `figures` folder contains, you guessed it, the figures!
+The `figures` folder contains, you guessed it, the figures! :trophy:
