@@ -30,8 +30,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, message = F, warning = F}
 library(tidyverse)
 library(metafor)
-library(purrr)
-library(colorspace)
 ```
 
 # Session info
@@ -402,6 +400,8 @@ ggplot(power_dat, aes(n, power)) +
 
 ```
 
+## No hacking FPR
+### Simulation 2
 
 ```{r}
 
@@ -410,7 +410,7 @@ params <- crossing( # all simulation parameters are fully crossed
   n.studies = 4,
   n = seq(20, 500, 20),
   d = 0,
-  iter = 1:10,
+  iter = 1:1000,
   method = c("HE", "FE")
 )
 
@@ -424,6 +424,60 @@ nohack_tmp <- purrr::pmap_dfr(params, function(...) {
 })
 
 save(nohack_tmp, file = "nohack_tmp.RData")
+
+
+```
+
+
+### Visualisation 2
+
+```{r}
+
+# load saved simulation results from chunk above
+load("nohack_tmp.RData")
+
+
+# create dataframe of all study sizes
+nohack_dat <- nohack_tmp %>% 
+  filter(study == 0) %>% 
+  group_by(n, method, d, n.studies) %>% 
+  summarise(power = mean(p < .05)) %>% # calculate power
+  ungroup()
+
+# plot
+# colourblind-friendly palette
+cbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
+               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+nohack_dat <- nohack_dat %>% 
+  rename(Method = method) %>% 
+  mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
+
+ggplot(nohack_dat, aes(n, power)) + 
+  geom_line(aes(linetype = Method, 
+                color = Method), size=1.5) +
+  scale_y_continuous(limits = c(0, 1),
+                     breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(limits = c(20, 500),
+                     breaks = seq(50, 500, 50)) +
+  geom_hline(yintercept = 0.05, size = 1, 
+             linetype = "longdash") +
+  scale_color_manual(values=cbPalette) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 15), 
+        title = element_text(size = 15), 
+        axis.text = element_text(size = 10), 
+        axis.ticks.x = element_line(size = 1), 
+        axis.text.x =element_text(size=12), 
+        axis.text.y = element_text(size=12), 
+        legend.text = element_text(size = 12)) +
+  labs(x = "Sample size (n)", 
+       y = "False Positive Rate (FPR)", 
+       title = "First and last p-values < 0.05") +
+  annotate("text", x = 120, y = 0.025, 
+           label = "Nominal FPR 0.05", size = 5)
+
+# ggsave("nohack_fpr_plot.png", width = 10, height = 7)
 
 
 ```
