@@ -403,6 +403,32 @@ ggplot(power_dat, aes(n, power)) +
 ```
 
 
+```{r}
+
+
+params <- crossing( # all simulation parameters are fully crossed
+  n.studies = 4,
+  n = seq(20, 500, 20),
+  d = 0,
+  iter = 1:10,
+  method = c("HE", "FE")
+)
+
+nohack_tmp <- purrr::pmap_dfr(params, function(...) {
+  dots <- list(...)
+  mini_meta(n.studies = dots$n.studies, 
+                 d = dots$d, 
+                 n = dots$n, 
+                 method = dots$method) %>%
+    mutate(!!!dots)
+})
+
+save(nohack_tmp, file = "nohack_tmp.RData")
+
+
+```
+
+
 \pagebreak
 
 ## p-threshold
@@ -484,7 +510,7 @@ cbPalette <- c("#E69F00", "#56B4E9", "#009E73",
 
 dat <- dat %>% 
   rename(Method = method) %>% 
-  mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed Effect"))
+  mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
 
 ggplot(dat, aes(n, power)) + 
   geom_line(aes(linetype = Method, 
@@ -492,7 +518,7 @@ ggplot(dat, aes(n, power)) +
   scale_y_continuous(limits = c(0, 1),
                      breaks = seq(0, 1, 0.1)) +
   scale_x_continuous(limits = c(20, 500),
-                     breaks = seq(20, 500, 50)) +
+                     breaks = seq(50, 500, 50)) +
   geom_hline(yintercept = 0.05, size = 1, 
              linetype = "longdash") +
   scale_color_manual(values=cbPalette) +
@@ -596,7 +622,7 @@ load("metahack_dat.RData") # load saved results for plot
 # changing column and row names for plot
 power.dat <- power.dat %>% 
   rename(Method = method) %>% 
-  mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed Effect"))
+  mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
 
 # colourblind-friendly palette
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
@@ -607,9 +633,9 @@ ggplot(power.dat, aes(n, power)) +
                 color = Method), size=1.5) +
   scale_y_continuous(limits = c(0, 1),
                      breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(limits = c(50, 500),
+  scale_x_continuous(limits = c(20, 500),
                      breaks = seq(50, 500, 50)) +
-  geom_hline(yintercept = 0.05, size = 1) +
+  geom_hline(yintercept = 0.05, size = 1, linetype = "longdash") +
   scale_color_manual(values=cbPalette) +
   theme_bw() +
   theme(axis.title = element_text(size = 15), 
