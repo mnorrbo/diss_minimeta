@@ -406,7 +406,7 @@ ggplot(power_dat, aes(n, power)) +
 ## No hacking FPR
 
 ### Simulation 2
-Simulation 2 simulates fixed and random effects internal meta-analyses, with varied number of studies, effect sizes and sample sizes. Iterations were kept at 1000 to be time efficient. The number of studies was set at 4 as that was the average number of studies in the coded literature.
+Simulation 2 simulates fixed and random effects internal meta-analyses, with a varied number of sample sizes (20-500). Iterations were kept at 1000 to be time efficient. The number of studies was set at 4 as that was the average number of studies in the coded literature.
 
 __Parameters__
 
