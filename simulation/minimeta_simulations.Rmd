@@ -3,17 +3,17 @@ title: "Simulations for 'Characterising the use of internal meta-analyses and as
 author: "Mandy Norrbo & Lisa DeBruine"
 date: "27/02/2020"
 output:
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
-    fig_width: 9
-    fig_height: 7
   pdf_document:
     fig_caption: no
     number_sections: no
     toc: yes
     toc_depth: 2
+    fig_width: 9
+    fig_height: 7
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
     fig_width: 9
     fig_height: 7
 bibliography: bibliography.bib
@@ -485,7 +485,7 @@ ggplot(nohack_dat, aes(n, power)) +
         legend.text = element_text(size = 12)) +
   labs(x = "Sample size (n)", 
        y = "False Positive Rate (FPR)", 
-       title = "First and last p-values < 0.05") +
+       title = "False positive rate without hacking") +
   annotate("text", x = 120, y = 0.025, 
            label = "Nominal FPR 0.05", size = 5)
 
