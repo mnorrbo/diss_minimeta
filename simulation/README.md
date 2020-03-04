@@ -6,6 +6,6 @@
 
 `bibliography.bib` contains the references used in the script
 
-`apa.csl` contains the APA citation style from [Citation Style Language] (https://github.com/citation-style-language).
+`apa.csl` contains the APA citation style from Citation Style Language (https://github.com/citation-style-language).
 
 The `figures` folder contains, you guessed it, the figures! :trophy:
