@@ -3,17 +3,17 @@ title: "Simulations for 'Characterising the use of internal meta-analyses and as
 author: "Mandy Norrbo & Lisa DeBruine"
 date: "27/02/2020"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+    fig_width: 9
+    fig_height: 7
   pdf_document:
     fig_caption: no
     number_sections: no
     toc: yes
     toc_depth: 2
-    fig_width: 9
-    fig_height: 7
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
     fig_width: 9
     fig_height: 7
 bibliography: bibliography.bib
@@ -31,6 +31,7 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(metafor)
 library(colorspace)
+library(knitr)
 ```
 
 # Session info
@@ -91,10 +92,10 @@ var_d <- function(d,n){
 A function that runs an internal meta-analysis for a user-specified number of studies, with a population effect size d and sample size n (per group). Can use methods available in rma(), here "FE" (fixed effect) and "HE" (random effects).
 ```{r}
 
-mini_meta <- function(n.studies, # no. of studies
-                           d, # effect size
-                           n, # sample size (per group)
-                           method = "HE"){ # method for rma()
+mini_meta <- function(n.studies = 4, # no. of studies
+                      d, # effect size
+                      n, # sample size (per group)
+                      method = "HE"){ # method for rma()
 
   study.ps <- vector() # vector for p-values
   study.effects <- vector() # vector for effect sizes
@@ -129,14 +130,12 @@ mini_meta <- function(n.studies, # no. of studies
 ## p_bound_meta()
 A function that runs a user-specified number of studies all with a group sample size of n and true effect size of d. If specified conditions are met (e.g. first p-value < 0.05 and last p-value < 0.1), then results are mini meta-analysed. Can run fixed-effect or random-effects models (specified using "method").
 ```{r}
-
-p_bound_meta <- function(n.studies, # no. of studies
-                           d, # effect size
-                           n, # sample size
-                           method = "HE", # method for rma()
-                           pmax.first = .05, # threshold for first p
-                           pmax.last = .05){ # threshold for last p
-
+p_bound_meta <- function(n.studies = 7, # no. of studies
+                         d, # effect size
+                         n, # sample size
+                         method = "HE", # method for rma()
+                         pmax.first = .05, # threshold for first p
+                         pmax.last = .05){ # threshold for last p
   study.ps <- vector() # vector for p-values
   study.effects <- vector() # vector for effect sizes
   study.var <- vector() # vector for variances
@@ -150,7 +149,8 @@ p_bound_meta <- function(n.studies, # no. of studies
     tbl <- data.frame( # create table of results
       study = 1,
       p = study.ps,
-      es = study.effects
+      es = study.effects,
+      id = 0
     )
     return(tbl)
   }
@@ -170,15 +170,14 @@ p_bound_meta <- function(n.studies, # no. of studies
   data.frame( # add results to a dataframe
     study = 1:length(study.ps),
     p = study.ps,
-    es = study.effects
-  ) %>%
-    add_row(
+    es = study.effects,
+    id = rep(1, each = length(study.ps))) %>%
+      add_row(
       study = 0, # meta-analysis results
       p = minimeta$pval, # meta-analysed p-value
       es = minimeta$beta[[1]] # meta-analyseds effect size
     )
 }
-
 ```
 
 \pagebreak
@@ -186,14 +185,12 @@ p_bound_meta <- function(n.studies, # no. of studies
 ## meta_hack()
 A function that runs an internal meta-analysis after every new study is added. It allows user to specify both a first p-value threshold (pmax.first) as well as a 'minitarget', i.e. a threshold for the meta-analysed p-value that stops the running of more studies (unless max number of studies is reached before).
 ```{r}
-
-meta_hack <- function(n.studies, # no. of studies
-                           d, # effect size
-                           n, # sample size 
-                           method = "HE", # method for rma()
-                           pmax.first = .05, # first p threshold
-                           minitarget = .05){ # meta-analysed p threshold
- 
+meta_hack <- function(n.studies = 7, # no. of studies
+                      d, # effect size
+                      n, # sample size 
+                      method = "HE", # method for rma()
+                      pmax.first = .05, # first p threshold
+                      minitarget = .05){ # meta-analysed p threshold
   # setting up results vectors
   study.ps <- vector()
   study.effects <- vector()
@@ -209,7 +206,8 @@ meta_hack <- function(n.studies, # no. of studies
     tbl <- data.frame( # create table of results
       study = 1,
       p = study.ps,
-      es = study.effects)
+      es = study.effects,
+      id = 0)
     return(tbl)
   }
   
@@ -226,7 +224,8 @@ meta_hack <- function(n.studies, # no. of studies
   data.frame( # add results to data frame
     study = 1:length(study.ps),
     p = study.ps,
-    es = study.effects
+    es = study.effects,
+    id = rep(1, each = length(study.ps))
   ) %>%
     add_row(
       study = 0, # meta-analysis results
@@ -234,7 +233,6 @@ meta_hack <- function(n.studies, # no. of studies
       es = minimeta$beta[[1]] # meta es
     )
   }
-
 ```
 
 \pagebreak
@@ -251,25 +249,23 @@ Simulation 1 is a power analysis for fixed and random effects internal meta-anal
 __Parameters__
 
 * Iterations: 1000
-* Number of studies: 2, 3, 4 and 5
-* Effect size: 0.1-1
-* Sample sizes: 50-500
+* Number of studies: 2-5
+* Effect size: 0-1
+* Sample sizes: 50-250
 * Method: random (HE) and fixed (FE) effects
 ```{r, eval = FALSE}
 
 set.seed(1337) # reproducible seed
 
-# 2 studies combined in internal meta-analysis
-
 params <- crossing( # all simulation parameters are fully crossed
-  n.studies = 2,
-  n = seq(50, 500, 50),
-  d = seq(0.1, 1, 0.1),
+  n.studies = c(2:5),
+  n = seq(50, 250, 50),
+  d = seq(0, 1, 0.1),
   iter = 1:1000,
   method = c("HE", "FE")
 )
 
-tmp2 <- purrr::pmap_dfr(params, function(...) {
+power_tmp <- purrr::pmap_dfr(params, function(...) {
   dots <- list(...)
   mini_meta(n.studies = dots$n.studies, 
                  d = dots$d, 
@@ -278,72 +274,7 @@ tmp2 <- purrr::pmap_dfr(params, function(...) {
     mutate(!!!dots)
 })
 
-save(tmp2, file = "power2_tmp.RData")
-
-# 3 studies combined in internal meta-analysis
-
-params <- crossing( # all simulation parameters are fully crossed
-  n.studies = 3,
-  n = seq(50, 500, 50),
-  d = seq(0.1, 1, 0.1),
-  iter = 1:1000,
-  method = c("HE", "FE")
-)
-
-tmp3 <- purrr::pmap_dfr(params, function(...) {
-  dots <- list(...)
-  mini_meta(n.studies = dots$n.studies, 
-                 d = dots$d, 
-                 n = dots$n, 
-                 method = dots$method) %>%
-    mutate(!!!dots)
-})
-
-save(tmp3, file = "power3_tmp.RData")
-
-
-# 4 studies combined in internal meta-analysis
-
-params <- crossing( # all simulation parameters are fully crossed
-  n.studies = 4,
-  n = seq(50, 500, 50),
-  d = seq(0.1, 1, 0.1),
-  iter = 1:1000,
-  method = c("HE", "FE")
-)
-
-tmp4 <- purrr::pmap_dfr(params, function(...) {
-  dots <- list(...)
-  mini_meta(n.studies = dots$n.studies, 
-                 d = dots$d, 
-                 n = dots$n, 
-                 method = dots$method) %>%
-    mutate(!!!dots)
-})
-
-save(tmp4, file = "power4_tmp.RData")
-
-
-# 5 studies combined in internal meta-analysis
-
-params <- crossing( # all simulation parameters are fully crossed
-  n.studies = 5,
-  n = seq(50, 500, 50),
-  d = seq(0.1, 1, 0.1),
-  iter = 1:1000,
-  method = c("HE", "FE")
-)
-
-tmp5 <- purrr::pmap_dfr(params, function(...) {
-  dots <- list(...)
-  mini_meta(n.studies = dots$n.studies, 
-                 d = dots$d, 
-                 n = dots$n, 
-                 method = dots$method) %>%
-    mutate(!!!dots)
-})
-
-save(tmp5, file = "power5_tmp.RData")
+save(power_tmp, file = "power_fpr_tmp.RData")
 
 ```
 
@@ -352,19 +283,16 @@ save(tmp5, file = "power5_tmp.RData")
 ```{r}
 
 # load saved simulation results from chunk above
-load("power2_tmp.RData")
-load("power3_tmp.RData")
-load("power4_tmp.RData")
-load("power5_tmp.RData")
+load("power_fpr_tmp.RData")
 
 # facet labels
-supp.labs <- c('2' = "2 studies meta-analysed", 
-               '3' = "3 studies meta-analysed", 
-               '4' = "4 studies meta-analysed", 
-               '5' = "5 studies meta-analysed")
+nstudies_labs <- c('2' = "2 studies meta-analysed", 
+                   '3' = "3 studies meta-analysed", 
+                   '4' = "4 studies meta-analysed",
+                   '5' = "5 studies meta-analysed")
 
 # create dataframe of all study sizes
-power_dat <- bind_rows(tmp2, tmp3, tmp4, tmp5) %>% 
+power_dat <- power_tmp %>% 
   filter(study == 0) %>% 
   group_by(n, method, d, n.studies) %>% 
   summarise(power = mean(p < .05)) %>% # calculate power
@@ -375,11 +303,11 @@ ggplot(power_dat, aes(n, power)) +
   geom_line(aes(color = factor(d), 
                 linetype = factor(method)), size=1.2) +
   facet_wrap(~n.studies, 
-             labeller = as_labeller(supp.labs)) +
+             labeller = as_labeller(nstudies_labs)) +
   scale_y_continuous(limits = c(0, 1),
                      breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(limits = c(50, 500),
-                     breaks = seq(50, 500, 100)) +
+  scale_x_continuous(limits = c(50, 250),
+                     breaks = seq(50, 250, 50)) +
   theme_bw() +
   scale_color_discrete_sequential("Viridis", name = "Effect size (d)") +
   scale_linetype(name = "Method", 
@@ -393,103 +321,12 @@ ggplot(power_dat, aes(n, power)) +
         legend.text = element_text(size = 12), 
         strip.text.x = element_text(size = 12)) +
   labs(x = "Sample size (n)", 
-       y = "True Positive Rate (Power)", 
+       y = "Rate of significant results", 
        title = "Statistical power of internal meta-analysis") +
-  geom_hline(yintercept = 0.8, linetype = "longdash", size = 1)
+  geom_hline(yintercept = 0.8, size = 1, alpha = 0.8, linetype = "longdash") +
+  geom_hline(yintercept = 0.05, size = 1, alpha = 0.8, linetype = "longdash")
 
 # ggsave("minimeta_power_plot.png", width = 10, height = 7)
-
-```
-
-\pagebreak
-
-## No hacking FPR
-
-### Simulation 2
-Simulation 2 simulates fixed and random effects internal meta-analyses, with a varied number of sample sizes (20-500). Iterations were kept at 1000 to be time efficient. The number of studies was set at 4 as that was the average number of studies in the coded literature.
-
-__Parameters__
-
-* Iterations: 1000
-* Number of studies: 4
-* Effect size: 0
-* Sample sizes: 20-500
-* Method: random (HE) and fixed (FE) effects
-```{r, eval = FALSE}
-
-params <- crossing( # all simulation parameters are fully crossed
-  n.studies = 4,
-  n = seq(20, 500, 20),
-  d = 0,
-  iter = 1:1000,
-  method = c("HE", "FE")
-)
-
-nohack_tmp <- purrr::pmap_dfr(params, function(...) {
-  dots <- list(...)
-  mini_meta(n.studies = dots$n.studies, 
-                 d = dots$d, 
-                 n = dots$n, 
-                 method = dots$method) %>%
-    mutate(!!!dots)
-})
-
-save(nohack_tmp, file = "nohack_tmp.RData")
-
-```
-
-
-### Visualisation 2
-
-```{r}
-
-# load saved simulation results from chunk above
-load("nohack_tmp.RData")
-
-# create dataframe of all study sizes
-nohack_dat <- nohack_tmp %>% 
-  filter(study == 0) %>% 
-  group_by(n, method, d, n.studies) %>% 
-  summarise(power = mean(p < .05)) %>% # calculate power
-  ungroup()
-
-# colourblind-friendly palette
-cbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
-               "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-# renaming figure legend
-nohack_dat <- nohack_dat %>% 
-  rename(Method = method) %>% 
-  mutate(Method = recode(Method, 
-                         "HE" = "Random effects", 
-                         "FE" = "Fixed effect"))
-
-# plot
-ggplot(nohack_dat, aes(n, power)) + 
-  geom_line(aes(linetype = Method, 
-                color = Method), size=1.5) +
-  scale_y_continuous(limits = c(0, 1),
-                     breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(limits = c(20, 500),
-                     breaks = seq(50, 500, 50)) +
-  geom_hline(yintercept = 0.05, size = 1, 
-             linetype = "longdash") +
-  scale_color_manual(values=cbPalette) +
-  theme_bw() +
-  theme(axis.title = element_text(size = 15), 
-        title = element_text(size = 15), 
-        axis.text = element_text(size = 10), 
-        axis.ticks.x = element_line(size = 1), 
-        axis.text.x =element_text(size=12), 
-        axis.text.y = element_text(size=12), 
-        legend.text = element_text(size = 12)) +
-  labs(x = "Sample size (n)", 
-       y = "False Positive Rate (FPR)", 
-       title = "False positive rate without hacking") +
-  annotate("text", x = 120, y = 0.025, 
-           label = "Nominal FPR 0.05", size = 5)
-
-# ggsave("nohack_fpr_plot.png", width = 10, height = 7)
 
 ```
 
@@ -499,16 +336,16 @@ ggplot(nohack_dat, aes(n, power)) +
 ## p-threshold
 
 
-### Simulation 3
-Simulation 3 estimates the false positive rate of internal meta-analyses with p-value thresholds for the first study and a p-value threshold stopping rule. Sample sizes and methods (fixed or random effects) were varied, whereas p thresholds and the max number of studies were constant. 
+### Simulation 2
+Simulation 2 estimates the false positive rate of internal meta-analyses with p-value thresholds for the first study and a p-value threshold stopping rule. Sample sizes and methods (fixed or random effects) were varied, whereas p thresholds and the max number of studies were constant. 
 
 __Parameters__
 
-* Iterations: 10000
-* Max number of studies: 12
+* Iterations: 1000
+* Max number of studies: 4 or 8
 * Effect size: 0
-* Sample sizes: 20-500
-* First p max: 0.05
+* Sample sizes: 20-250
+* First p max: 0.1 or 0.05
 * Last p max: 0.05
 * Method: random (HE) and fixed (FE) effects
 ```{r, eval = FALSE}
@@ -519,16 +356,17 @@ set.seed(1337) # reproducible seed
 # simulation parameters
 params <- crossing(
   i = 1:10000, # iterations
-  n.studies = 12, # maximum no. of studies (based on lit coding)
-  n = seq(20, 500, 20), # vector of sample sizes (based on lit coding)
-  pmax.first = 0.05, # vector of first p-values (based on lit coding)
-  pmax.last = 0.05, # vector of last p-values (based on lit coding)
+  n.studies = c(4, 8), # maximum no. of studies (based on lit coding)
+  n = seq(50, 250, 50), # vector of sample sizes (based on lit coding)
+  d = 0, # population effect size
+  pmax.first = c(0.05, 0.1), # vector of first p-values (based on lit coding)
+  pmax.last = c(0.05,0.1), # vector of last p-values (based on lit coding)
   method = c("HE", "FE")
 )
 
 # using p_bound_meta()
 
-tmp <- purrr::pmap_dfr(params, function(...) {
+pbound_tmp <- purrr::pmap_dfr(params, function(...) {
   dots <- list(...)
   p_bound_meta(n.studies = dots$n.studies, 
                  d = dots$d, 
@@ -540,66 +378,74 @@ tmp <- purrr::pmap_dfr(params, function(...) {
 })
 
 # save all results
-save(tmp, file = "p_bound_tmp.RData")
+save(pbound_tmp, file = "pbound_tmp.RData")
 
 # calculate how many meta-analysed p-values
-outof <- tmp %>%
+outof <- pbound_tmp %>%
   filter(study == 0) %>% 
-  group_by(pmax.first, pmax.last, n, method, d) %>% 
+  group_by(pmax.first, pmax.last, n, method, d, n.studies) %>% 
   count() %>% 
-  rename(metatotal = nn)
+  rename(metatotal = nn) %>% 
+  ungroup()
 
-# calculate how many significant meta-analysed p-values
-dat <- tmp %>% 
+dat <- pbound_tmp %>%
   filter(study == 0, p < .05) %>% # all significant meta results
-  group_by(pmax.first, pmax.last, n, method, d) %>% 
-  count() %>% 
-  ungroup() %>% 
-  mutate(power = nn/outof$metatotal) # calculate false positive rate
+  group_by(pmax.first, pmax.last, n, method, d, n.studies) %>%
+  count() %>%
+  ungroup() 
+
+pbound_dat <- left_join(dat, outof, by = c("n", "method", "pmax.first", "pmax.last", "n.studies")) %>% 
+  select(n, method, nn, metatotal, pmax.first, pmax.last, n.studies) %>% 
+  mutate(power = nn/metatotal) # calculate false positive rate
 
 # save false positive rates for each combination 
-save(dat, outof, file = "p_bound_dat.RData")
+save(pbound_dat, outof, file = "pbound_dat.RData")
 
 ```
 
-### Visualisation 3
+### Visualisation 2
 The colourblind-friendly palette used in the plot was obtained from @colour1234.
 ```{r}
 
-#load("p_bound_tmp.RData")
-load("p_bound_dat.RData") # load saved results for plot
+#load("pbound_tmp.RData")
+load("pbound_dat.RData") # load saved results for plot
 
 # colourblind-friendly palette
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
                "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-dat <- dat %>% 
+pbound_dat <- pbound_dat %>% 
   rename(Method = method) %>% 
   mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
 
-ggplot(dat, aes(n, power)) + 
+first_labs <- c("p < 0.05", "p < 0.1")
+last_labs <- c("p < 0.05", "p < 0.1")
+
+ggplot(pbound_dat, aes(n, power)) + 
   geom_line(aes(linetype = Method, 
-                color = Method), size=1.5) +
-  scale_y_continuous(limits = c(0, 1),
-                     breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(limits = c(20, 500),
-                     breaks = seq(50, 500, 50)) +
+                color = factor(n.studies)), size=1) +
+  scale_y_continuous(limits = c(0, 0.5),
+                     breaks = seq(0, 0.5, 0.1)) +
+  scale_x_continuous(limits = c(50, 250),
+                     breaks = seq(50, 250, 50)) +
   geom_hline(yintercept = 0.05, size = 1, 
              linetype = "longdash") +
-  scale_color_manual(values=cbPalette) +
+  scale_color_manual(values=cbPalette, name = "Max studies") +
   theme_bw() +
   theme(axis.title = element_text(size = 15), 
         title = element_text(size = 15), 
         axis.text = element_text(size = 10), 
         axis.ticks.x = element_line(size = 1), 
-        axis.text.x =element_text(size=12), 
+        axis.text.x = element_text(size=12), 
         axis.text.y = element_text(size=12), 
-        legend.text = element_text(size = 12)) +
+        legend.text = element_text(size = 12),
+        strip.text = element_text(size = 12)) +
   labs(x = "Sample size (n)", 
        y = "False Positive Rate (FPR)", 
-       title = "First and last p-values < 0.05") +
+       title = "Simulation 2: p-value thresholds") +
   annotate("text", x = 120, y = 0.025, 
-           label = "Nominal FPR 0.05", size = 5)
+           label = "Nominal FPR 0.05", size = 5) +
+  facet_grid(pmax.last~pmax.first)
 
 # ggsave("minimeta_pbound_plot.png", width = 10, height = 7)
 
@@ -609,16 +455,16 @@ ggplot(dat, aes(n, power)) +
 
 ## Meta-hacking
 
-### Simulation 4
+### Simulation 3
 Simulation 4 estimates the false positive rate of internal meta-analyses with p-value thresholds for the first study and a meta-analysed p threshold stopping rule. Sample sizes and methods (fixed or random effects) were varied, whereas p thresholds and the max number of studies were constant. 
 
 __Parameters__
 
-* Iterations: 10000
-* Max number of studies: 12
+* Iterations: 1000
+* Max number of studies: 4 or 8
 * Effect size: 0
-* Sample sizes: 20-500
-* First p max: 0.05
+* Sample sizes: 20-250
+* First p max: 0.1 or 0.05
 * Minitarget: 0.05
 * Method: random (HE) and fixed (FE) effects
 ```{r, eval = FALSE}
@@ -628,16 +474,16 @@ set.seed(1337) # reproducible seed
 # simulation parameters
 params <- crossing(
   i = 1:10000, # iterations
-  n.studies = 12, # max no. of studies
+  n.studies = c(4,8), # max no. of studies
   d = 0, # true effect size
-  n = seq(20, 500, 20), # vector of sample sizes
+  n = seq(50, 250, 50), # vector of sample sizes
   pmax.first = 0.05, # first p-value threshold
   minitarget = 0.05, # minimeta threshold
   method = c("HE", "FE") # random (HE) and fixed effect (FE)
 )
 
 # simulation
-tmp <- purrr::pmap_dfr(params, function(...) {
+metahack_tmp <- purrr::pmap_dfr(params, function(...) {
   dots <- list(...)
   meta_hack(n.studies = dots$n.studies,
                  d = dots$d,
@@ -650,42 +496,42 @@ tmp <- purrr::pmap_dfr(params, function(...) {
 
 
 # save all results
-save(tmp, file = "metahack_tmp.RData")
+save(metahack_tmp, file = "metahack_tmp.RData")
 
 # all meta-analysed p-values
-outof <- tmp %>%
+outof <- metahack_tmp %>%
   filter(study == 0) %>%
-  group_by(pmax.first, minitarget, n, method, d) %>%
+  group_by(pmax.first, minitarget, n, method, d, n.studies) %>%
   count() %>%
   rename(metatotal = nn) %>% 
   ungroup()
 
 # all significant meta-analysed p-values
-dat <- tmp %>%
+dat <- metahack_tmp %>%
   filter(study == 0, p < .05) %>% # all significant meta results
-  group_by(pmax.first, minitarget, n, method, d) %>%
+  group_by(pmax.first, minitarget, n, method, d, n.studies) %>%
   count() %>%
   ungroup() 
 
-power.dat <- left_join(dat, outof, by = c("n", "method")) %>% 
+metahack_dat <- left_join(dat, outof, by = c("n", "method", "pmax.first", "minitarget", "n.studies")) %>% 
   ungroup() %>% 
-  select(n, method, nn, metatotal) %>% 
+  select(n, method, nn, metatotal, n.studies) %>% 
   mutate(power = nn/metatotal) # calculate false positive rate
 
 # save false positive rate results
-save(dat, outof, power.dat, file = "metahack_dat.RData")
+save(dat, outof, metahack_dat, file = "metahack_dat.RData")
 ```
 
 
-### Visualisation 4
+### Visualisation 3
 The colourblind-friendly palette used in the plot was obtained from @colour1234.
-```{r, warning= F}
+```{r}
 
 #load("metahack_tmp.RData")
 load("metahack_dat.RData") # load saved results for plot
 
 # changing column and row names for plot
-power.dat <- power.dat %>% 
+metahack_dat <- metahack_dat %>% 
   rename(Method = method) %>% 
   mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
 
@@ -693,15 +539,15 @@ power.dat <- power.dat %>%
 cbPalette <- c("#E69F00", "#56B4E9", "#009E73", 
                "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-ggplot(power.dat, aes(n, power)) +
+ggplot(metahack_dat, aes(n, power)) + 
   geom_line(aes(linetype = Method, 
-                color = Method), size=1.5) +
+                color = factor(n.studies)), size=1.5) +
   scale_y_continuous(limits = c(0, 1),
                      breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(limits = c(20, 500),
-                     breaks = seq(50, 500, 50)) +
+  scale_x_continuous(limits = c(50, 250),
+                     breaks = seq(50, 250, 50)) +
   geom_hline(yintercept = 0.05, size = 1, linetype = "longdash") +
-  scale_color_manual(values=cbPalette) +
+  scale_color_manual(values=cbPalette, name = "Max studies") +
   theme_bw() +
   theme(axis.title = element_text(size = 15), 
         title = element_text(size = 15), 
@@ -713,12 +559,60 @@ ggplot(power.dat, aes(n, power)) +
   labs(x = "Sample size (n)", 
        y = "False Positive Rate (FPR)", 
        title = "First p-value < 0.05 and meta-hack") +
-  annotate("text", x = 120, y = 0.022, 
+  annotate("text", x = 85, y = 0.022, 
            label = "Nominal FPR 0.05", size = 5)
 
 # ggsave("minimeta_metahack_plot.png", width = 10, height = 7)
 
 ```
+
+\pagebreak
+
+# Table of results
+
+```{r}
+load("pbound_tmp.RData")
+load("metahack_tmp.RData")
+
+# p-threshold table
+pbound_table <- pbound_tmp %>%
+  mutate(significant = ifelse(p < 0.05, "yes", "no")) %>% 
+  group_by(id, significant) %>% 
+  count() %>% 
+  ungroup() %>%
+  mutate(id = ifelse(is.na(id), "meta", id)) %>%
+  mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
+  mutate(proportion = round(n/nrow(pbound_tmp),2)) 
+
+pbound_table %>% 
+ kable() 
+
+# meta-hack table
+metahack_table <- metahack_tmp %>%
+  mutate(significant = ifelse(p < 0.05, "yes", "no")) %>% 
+  group_by(id, significant) %>% 
+  count() %>% 
+  ungroup() %>%
+  mutate(id = ifelse(is.na(id), "meta", id)) %>%
+  mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
+  mutate(proportion = round(n/nrow(metahack_tmp),2)) 
+
+metahack_table %>% 
+  kable()
+
+```
+
+# Further analyses
+```{r}
+
+# false positive rate of mini meta across parameters
+metahack_fpr <- metahack_table[[5,3]]/sum(metahack_table$n[4:5])
+
+# false positive rate of mini meta across parameters
+pbound_fpr <- pbound_table[[5,3]]/sum(pbound_table$n[4:5])
+
+```
+
 
 \pagebreak
 
