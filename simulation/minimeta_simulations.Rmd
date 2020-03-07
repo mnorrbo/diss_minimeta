@@ -276,6 +276,14 @@ power_tmp <- purrr::pmap_dfr(params, function(...) {
 
 save(power_tmp, file = "power_fpr_tmp.RData")
 
+# create dataframe of results
+power_dat <- power_tmp %>% 
+  filter(study == 0) %>% 
+  group_by(n, method, d, n.studies) %>% 
+  summarise(power = mean(p < .05)) %>% # calculate power
+  ungroup()
+
+save(power_dat, file = "power_dat.RData")
 ```
 
 ### Visualisation 1
@@ -283,7 +291,8 @@ save(power_tmp, file = "power_fpr_tmp.RData")
 ```{r}
 
 # load saved simulation results from chunk above
-load("power_fpr_tmp.RData")
+#load("power_fpr_tmp.RData)
+load("power_dat.RData")
 
 # facet labels
 nstudies_labs <- c('2' = "2 studies meta-analysed", 
@@ -291,12 +300,6 @@ nstudies_labs <- c('2' = "2 studies meta-analysed",
                    '4' = "4 studies meta-analysed",
                    '5' = "5 studies meta-analysed")
 
-# create dataframe of all study sizes
-power_dat <- power_tmp %>% 
-  filter(study == 0) %>% 
-  group_by(n, method, d, n.studies) %>% 
-  summarise(power = mean(p < .05)) %>% # calculate power
-  ungroup()
 
 # plot
 ggplot(power_dat, aes(n, power)) + 
