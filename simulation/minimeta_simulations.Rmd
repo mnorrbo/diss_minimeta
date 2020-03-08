@@ -587,6 +587,8 @@ pbound_table <- pbound_tmp %>%
   mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
   mutate(proportion = round(n/nrow(pbound_tmp),2)) 
 
+write.table(pbound_table, file = "pbound_table.csv", sep = ",", row.names = FALSE)
+
 pbound_table %>% 
  kable() 
 
@@ -599,6 +601,8 @@ metahack_table <- metahack_tmp %>%
   mutate(id = ifelse(is.na(id), "meta", id)) %>%
   mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
   mutate(proportion = round(n/nrow(metahack_tmp),2)) 
+
+write.table(metahack_table, file = "metahack_table.csv", sep = ",", row.names = FALSE)
 
 metahack_table %>% 
   kable()
