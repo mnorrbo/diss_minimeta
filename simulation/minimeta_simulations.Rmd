@@ -421,9 +421,6 @@ pbound_dat <- pbound_dat %>%
   rename(Method = method) %>% 
   mutate(Method = recode(Method, "HE" = "Random effects", "FE" = "Fixed effect"))
 
-first_labs <- c("p < 0.05", "p < 0.1")
-last_labs <- c("p < 0.05", "p < 0.1")
-
 ggplot(pbound_dat, aes(n, power)) + 
   geom_line(aes(linetype = Method, 
                 color = factor(n.studies)), size=1) +
@@ -448,9 +445,12 @@ ggplot(pbound_dat, aes(n, power)) +
        title = "Simulation 2: p-value thresholds") +
   annotate("text", x = 120, y = 0.015, 
            label = "Nominal FPR 0.05", size = 5) +
-  facet_grid(pmax.last~pmax.first)
+  facet_grid(pmax.last ~ pmax.first, labeller = labeller(
+    pmax.last = c("0.05" = "last p < 0.05", "0.1" = "last p < 0.1"),
+    pmax.first = c("0.05" = "first p < 0.05", "0.1" = "first p < 0.1")
+  ))
 
-ggsave("minimeta_pbound_plot.png", width = 10, height = 7)
+# ggsave("minimeta_pbound_plot.png", width = 10, height = 7)
 
 ```
 
@@ -571,7 +571,7 @@ ggplot(metahack_dat, aes(n, power)) +
 
 \pagebreak
 
-# Table of results
+# Table & Analyses
 
 ```{r}
 load("pbound_tmp.RData")
@@ -603,10 +603,17 @@ metahack_table <- metahack_tmp %>%
 metahack_table %>% 
   kable()
 
-```
+load("metahack_dat.RData")
+load("pbound_dat.RData")
 
-# Further analyses
-```{r}
+# FPR in Sim 2
+pbound_fpr_range <- pbound_dat %>%
+  summarise(maxfpr = max(power),
+            minfpr = min(power))
+
+metahack_fpr_range <- metahack_dat %>%
+  summarise(maxfpr = max(power),
+            minfpr = min(power))
 
 # false positive rate of mini meta across parameters
 metahack_fpr <- metahack_table[[5,3]]/sum(metahack_table$n[4:5])
