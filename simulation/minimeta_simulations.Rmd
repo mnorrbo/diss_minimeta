@@ -150,7 +150,7 @@ p_bound_meta <- function(n.studies = 7, # no. of studies
       study = 1,
       p = study.ps,
       es = study.effects,
-      id = 0
+      id = 0 # id studies that did not pass threshold
     )
     return(tbl)
   }
@@ -207,7 +207,7 @@ meta_hack <- function(n.studies = 7, # no. of studies
       study = 1,
       p = study.ps,
       es = study.effects,
-      id = 0)
+      id = 0) # id studies that did not pass threshold
     return(tbl)
   }
   
