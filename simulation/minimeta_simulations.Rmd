@@ -446,11 +446,11 @@ ggplot(pbound_dat, aes(n, power)) +
   labs(x = "Sample size (n)", 
        y = "False Positive Rate (FPR)", 
        title = "Simulation 2: p-value thresholds") +
-  annotate("text", x = 120, y = 0.025, 
+  annotate("text", x = 120, y = 0.015, 
            label = "Nominal FPR 0.05", size = 5) +
   facet_grid(pmax.last~pmax.first)
 
-# ggsave("minimeta_pbound_plot.png", width = 10, height = 7)
+ggsave("minimeta_pbound_plot.png", width = 10, height = 7)
 
 ```
 
