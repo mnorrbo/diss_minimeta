@@ -3,17 +3,17 @@ title: "Simulations for 'Characterising the use of internal meta-analyses and as
 author: "Mandy Norrbo & Lisa DeBruine"
 date: "27/02/2020"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '2'
+    fig_width: 9
+    fig_height: 7
   pdf_document:
     fig_caption: no
     number_sections: no
     toc: yes
     toc_depth: 2
-    fig_width: 9
-    fig_height: 7
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '2'
     fig_width: 9
     fig_height: 7
 bibliography: bibliography.bib
