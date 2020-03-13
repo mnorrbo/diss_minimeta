@@ -577,35 +577,71 @@ ggplot(metahack_dat, aes(n, power)) +
 load("pbound_tmp.RData")
 load("metahack_tmp.RData")
 
-# p-threshold table
-pbound_table <- pbound_tmp %>%
-  mutate(significant = ifelse(p < 0.05, "yes", "no")) %>% 
-  group_by(id, significant) %>% 
+# number of total simulations
+# number of studies that didnt continue running studies
+# number of significant meta-analyses
+# number of not significant meta-analyses
+
+# p-threshold table results
+options(scipen = 99)
+
+total_simulations <- pbound_tmp %>% 
+  filter(study == 1) %>%
+  group_by(pmax.first, pmax.last) %>% 
   count() %>% 
-  ungroup() %>%
-  mutate(id = ifelse(is.na(id), "meta", id)) %>%
-  mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
-  mutate(proportion = round(n/nrow(pbound_tmp),2)) 
+  ungroup()
 
-write.table(pbound_table, file = "pbound_table.csv", sep = ",", row.names = FALSE)
-
-pbound_table %>% 
- kable() 
-
-# meta-hack table
-metahack_table <- metahack_tmp %>%
-  mutate(significant = ifelse(p < 0.05, "yes", "no")) %>% 
-  group_by(id, significant) %>% 
+did_not_meet <- pbound_tmp %>%
+  filter(id == 0) %>% 
+  group_by(pmax.first, pmax.last) %>% 
   count() %>% 
-  ungroup() %>%
-  mutate(id = ifelse(is.na(id), "meta", id)) %>%
-  mutate(id = recode(id, `0` = "filedrawer", `1` = "studies")) %>% 
-  mutate(proportion = round(n/nrow(metahack_tmp),2)) 
+  ungroup() 
 
-write.table(metahack_table, file = "metahack_table.csv", sep = ",", row.names = FALSE)
+sig_meta <- pbound_tmp %>% 
+  filter(study == 0, p < 0.05) %>% 
+  group_by(pmax.first, pmax.last) %>% 
+  count()  %>% 
+  ungroup() 
 
-metahack_table %>% 
-  kable()
+not_sig_meta <- pbound_tmp %>% 
+  filter(study == 0, p > 0.05) %>% 
+  group_by(pmax.first, pmax.last) %>% 
+  count()  %>% 
+  ungroup()
+
+
+
+pbound_table <- t(tibble(total_simulations[,1:2],
+                       didnotmeet = round(did_not_meet$n/total_simulations$n, 2),
+                       sigmeta = round(sig_meta$n/total_simulations$n, 2),
+                       nonsigmeta = round(not_sig_meta$n/total_simulations$n, 2))) 
+
+# metahack table
+
+total_simulations <- metahack_tmp %>% 
+  filter(study == 1) %>%
+  count()
+
+did_not_meet <- metahack_tmp %>%
+  filter(id == 0) %>% 
+  count()
+
+sig_meta <- metahack_tmp %>% 
+  filter(study == 0, p < 0.05) %>% 
+  count()
+
+not_sig_meta <- metahack_tmp %>% 
+  filter(study == 0, p > 0.05) %>% 
+  count()
+
+metahack_table <- t(
+  tibble(
+  didnotmeet = round(did_not_meet$n/total_simulations$n, 2),
+  sigmeta = round(sig_meta$n/total_simulations$n, 2),
+  notsigmeta = round(not_sig_meta$n/total_simulations$n, 2)
+  )
+  )
+
 
 load("metahack_dat.RData")
 load("pbound_dat.RData")
