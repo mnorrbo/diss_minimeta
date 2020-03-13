@@ -2202,119 +2202,73 @@ ggplot(metahack_dat, aes(n, power)) +
 <pre class="r"><code>load(&quot;pbound_tmp.RData&quot;)
 load(&quot;metahack_tmp.RData&quot;)
 
-# p-threshold table
-pbound_table &lt;- pbound_tmp %&gt;%
-  mutate(significant = ifelse(p &lt; 0.05, &quot;yes&quot;, &quot;no&quot;)) %&gt;% 
-  group_by(id, significant) %&gt;% 
+# p-threshold table results
+
+# number of total simulations
+total_simulations &lt;- pbound_tmp %&gt;% 
+  filter(study == 1) %&gt;%
+  group_by(pmax.first, pmax.last) %&gt;% 
   count() %&gt;% 
-  ungroup() %&gt;%
-  mutate(id = ifelse(is.na(id), &quot;meta&quot;, id)) %&gt;%
-  mutate(id = recode(id, `0` = &quot;filedrawer&quot;, `1` = &quot;studies&quot;)) %&gt;% 
-  mutate(proportion = round(n/nrow(pbound_tmp),2)) 
+  ungroup()
 
-write.table(pbound_table, file = &quot;pbound_table.csv&quot;, sep = &quot;,&quot;, row.names = FALSE)
-
-pbound_table %&gt;% 
- kable() </code></pre>
-<table>
-<thead>
-<tr class="header">
-<th align="left">id</th>
-<th align="left">significant</th>
-<th align="right">n</th>
-<th align="right">proportion</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">filedrawer</td>
-<td align="left">no</td>
-<td align="right">740112</td>
-<td align="right">0.67</td>
-</tr>
-<tr class="even">
-<td align="left">studies</td>
-<td align="left">no</td>
-<td align="right">260253</td>
-<td align="right">0.23</td>
-</tr>
-<tr class="odd">
-<td align="left">studies</td>
-<td align="left">yes</td>
-<td align="right">52343</td>
-<td align="right">0.05</td>
-</tr>
-<tr class="even">
-<td align="left">meta</td>
-<td align="left">no</td>
-<td align="right">51121</td>
-<td align="right">0.05</td>
-</tr>
-<tr class="odd">
-<td align="left">meta</td>
-<td align="left">yes</td>
-<td align="right">8767</td>
-<td align="right">0.01</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code># meta-hack table
-metahack_table &lt;- metahack_tmp %&gt;%
-  mutate(significant = ifelse(p &lt; 0.05, &quot;yes&quot;, &quot;no&quot;)) %&gt;% 
-  group_by(id, significant) %&gt;% 
+# number of studies that didnt continue running studies
+did_not_meet &lt;- pbound_tmp %&gt;%
+  filter(id == 0) %&gt;% 
+  group_by(pmax.first, pmax.last) %&gt;% 
   count() %&gt;% 
-  ungroup() %&gt;%
-  mutate(id = ifelse(is.na(id), &quot;meta&quot;, id)) %&gt;%
-  mutate(id = recode(id, `0` = &quot;filedrawer&quot;, `1` = &quot;studies&quot;)) %&gt;% 
-  mutate(proportion = round(n/nrow(metahack_tmp),2)) 
+  ungroup() 
 
-write.table(metahack_table, file = &quot;metahack_table.csv&quot;, sep = &quot;,&quot;, row.names = FALSE)
+# number of significant meta-analyses
+sig_meta &lt;- pbound_tmp %&gt;% 
+  filter(study == 0, p &lt; 0.05) %&gt;% 
+  group_by(pmax.first, pmax.last) %&gt;% 
+  count()  %&gt;% 
+  ungroup()
 
-metahack_table %&gt;% 
-  kable()</code></pre>
-<table>
-<thead>
-<tr class="header">
-<th align="left">id</th>
-<th align="left">significant</th>
-<th align="right">n</th>
-<th align="right">proportion</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">filedrawer</td>
-<td align="left">no</td>
-<td align="right">190031</td>
-<td align="right">0.77</td>
-</tr>
-<tr class="even">
-<td align="left">studies</td>
-<td align="left">no</td>
-<td align="right">34559</td>
-<td align="right">0.14</td>
-</tr>
-<tr class="odd">
-<td align="left">studies</td>
-<td align="left">yes</td>
-<td align="right">11753</td>
-<td align="right">0.05</td>
-</tr>
-<tr class="even">
-<td align="left">meta</td>
-<td align="left">no</td>
-<td align="right">6219</td>
-<td align="right">0.03</td>
-</tr>
-<tr class="odd">
-<td align="left">meta</td>
-<td align="left">yes</td>
-<td align="right">3750</td>
-<td align="right">0.02</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>load(&quot;metahack_dat.RData&quot;)
+# number of not significant meta-analyses
+not_sig_meta &lt;- pbound_tmp %&gt;% 
+  filter(study == 0, p &gt; 0.05) %&gt;% 
+  group_by(pmax.first, pmax.last) %&gt;% 
+  count()  %&gt;% 
+  ungroup()
+
+
+
+pbound_table &lt;- t(tibble(total_simulations[,1:2],
+                       didnotmeet = round(did_not_meet$n/total_simulations$n, 2),
+                       sigmeta = round(sig_meta$n/total_simulations$n, 2),
+                       nonsigmeta = round(not_sig_meta$n/total_simulations$n, 2))) 
+
+# metahack table
+
+# number of total simulations
+total_simulations &lt;- metahack_tmp %&gt;% 
+  filter(study == 1) %&gt;%
+  count()
+
+# number of studies that didnt continue running studies
+did_not_meet &lt;- metahack_tmp %&gt;%
+  filter(id == 0) %&gt;% 
+  count()
+
+# number of significant meta-analyses
+sig_meta &lt;- metahack_tmp %&gt;% 
+  filter(study == 0, p &lt; 0.05) %&gt;% 
+  count()
+
+# number of not significant meta-analyses
+not_sig_meta &lt;- metahack_tmp %&gt;% 
+  filter(study == 0, p &gt; 0.05) %&gt;% 
+  count()
+
+metahack_table &lt;- t(tibble(
+  didnotmeet = round(did_not_meet$n/total_simulations$n, 2),
+  sigmeta = round(sig_meta$n/total_simulations$n, 2),
+  notsigmeta = round(not_sig_meta$n/total_simulations$n, 2)))
+
+# other analyses
+
+load(&quot;metahack_dat.RData&quot;)
 load(&quot;pbound_dat.RData&quot;)
 
 # FPR in Sim 2
@@ -2324,13 +2278,7 @@ pbound_fpr_range &lt;- pbound_dat %&gt;%
 
 metahack_fpr_range &lt;- metahack_dat %&gt;%
   summarise(maxfpr = max(power),
-            minfpr = min(power))
-
-# false positive rate of mini meta across parameters
-metahack_fpr &lt;- metahack_table[[5,3]]/sum(metahack_table$n[4:5])
-
-# false positive rate of mini meta across parameters
-pbound_fpr &lt;- pbound_table[[5,3]]/sum(pbound_table$n[4:5])</code></pre>
+            minfpr = min(power))</code></pre>
 <div style="page-break-after: always;"></div>
 </div>
 <div id="references" class="section level1 unnumbered">

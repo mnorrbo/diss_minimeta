@@ -577,32 +577,30 @@ ggplot(metahack_dat, aes(n, power)) +
 load("pbound_tmp.RData")
 load("metahack_tmp.RData")
 
-# number of total simulations
-# number of studies that didnt continue running studies
-# number of significant meta-analyses
-# number of not significant meta-analyses
-
 # p-threshold table results
-options(scipen = 99)
 
+# number of total simulations
 total_simulations <- pbound_tmp %>% 
   filter(study == 1) %>%
   group_by(pmax.first, pmax.last) %>% 
   count() %>% 
   ungroup()
 
+# number of studies that didnt continue running studies
 did_not_meet <- pbound_tmp %>%
   filter(id == 0) %>% 
   group_by(pmax.first, pmax.last) %>% 
   count() %>% 
   ungroup() 
 
+# number of significant meta-analyses
 sig_meta <- pbound_tmp %>% 
   filter(study == 0, p < 0.05) %>% 
   group_by(pmax.first, pmax.last) %>% 
   count()  %>% 
-  ungroup() 
+  ungroup()
 
+# number of not significant meta-analyses
 not_sig_meta <- pbound_tmp %>% 
   filter(study == 0, p > 0.05) %>% 
   group_by(pmax.first, pmax.last) %>% 
@@ -618,30 +616,32 @@ pbound_table <- t(tibble(total_simulations[,1:2],
 
 # metahack table
 
+# number of total simulations
 total_simulations <- metahack_tmp %>% 
   filter(study == 1) %>%
   count()
 
+# number of studies that didnt continue running studies
 did_not_meet <- metahack_tmp %>%
   filter(id == 0) %>% 
   count()
 
+# number of significant meta-analyses
 sig_meta <- metahack_tmp %>% 
   filter(study == 0, p < 0.05) %>% 
   count()
 
+# number of not significant meta-analyses
 not_sig_meta <- metahack_tmp %>% 
   filter(study == 0, p > 0.05) %>% 
   count()
 
-metahack_table <- t(
-  tibble(
+metahack_table <- t(tibble(
   didnotmeet = round(did_not_meet$n/total_simulations$n, 2),
   sigmeta = round(sig_meta$n/total_simulations$n, 2),
-  notsigmeta = round(not_sig_meta$n/total_simulations$n, 2)
-  )
-  )
+  notsigmeta = round(not_sig_meta$n/total_simulations$n, 2)))
 
+# other analyses
 
 load("metahack_dat.RData")
 load("pbound_dat.RData")
@@ -654,12 +654,6 @@ pbound_fpr_range <- pbound_dat %>%
 metahack_fpr_range <- metahack_dat %>%
   summarise(maxfpr = max(power),
             minfpr = min(power))
-
-# false positive rate of mini meta across parameters
-metahack_fpr <- metahack_table[[5,3]]/sum(metahack_table$n[4:5])
-
-# false positive rate of mini meta across parameters
-pbound_fpr <- pbound_table[[5,3]]/sum(pbound_table$n[4:5])
 
 ```
 
